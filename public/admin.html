@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Five Group — Panel Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600&family=Fraunces:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#10151C; --paper:#F1EDE3; --cream:#E8E2D2; --brass:#B5892C; --muted:#565f68; --line:rgba(16,21,28,.12); --ok:#1f8a5c; --err:#b3392b; }
+  *{ box-sizing:border-box; }
+  body{ font-family:"Work Sans",sans-serif; background:var(--paper); color:var(--ink); margin:0; padding:32px 20px 80px; }
+  .wrap{ max-width:920px; margin:0 auto; }
+  h1{ font-family:"Fraunces",serif; font-weight:500; margin:0 0 4px; font-size:1.7rem; }
+  p.sub{ color:var(--muted); margin-top:0; }
+
+  .key-row{ display:flex; gap:10px; margin:20px 0 28px; }
+  input, select, textarea{ font-family:inherit; padding:10px 12px; border:1px solid var(--line); border-radius:4px; background:#fff; }
+  input, textarea{ width:100%; }
+  button{ padding:10px 18px; border:none; border-radius:4px; background:var(--ink); color:var(--paper); cursor:pointer; font-family:inherit; font-size:.9rem; }
+  button.secondary{ background:transparent; color:var(--ink); border:1px solid var(--line); }
+  button.danger{ background:#b3392b; color:#fff; }
+
+  #app{ display:none; }
+  #app.visible{ display:block; }
+
+  .stat-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:32px; }
+  .stat-card{ background:#fff; border:1px solid var(--line); border-radius:6px; padding:16px; }
+  .stat-card .num{ font-family:"Fraunces",serif; font-size:1.6rem; display:block; }
+  .stat-card .label{ font-size:.78rem; color:var(--muted); }
+
+  .tabs{ display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:24px; flex-wrap:wrap; }
+  .tab-btn{ background:none; border:none; padding:10px 16px; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; }
+  .tab-btn.active{ color:var(--ink); border-bottom-color:var(--brass); font-weight:600; }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  table{ width:100%; border-collapse:collapse; font-size:.88rem; background:#fff; }
+  th, td{ text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th{ color:var(--muted); font-weight:600; font-size:.76rem; }
+  td select{ font-size:.82rem; padding:6px 8px; }
+  .status-pill{ display:inline-block; padding:3px 9px; border-radius:20px; font-size:.76rem; font-weight:600; }
+  .status-Baru{ background:#fdf0d5; color:#8a5a00; }
+  .status-Diproses{ background:#dceaf7; color:#1a5a8a; }
+  .status-Selesai{ background:#dcf3e3; color:var(--ok); }
+  .status-Dibatalkan{ background:#f7dcdc; color:var(--err); }
+
+  .card-form{ background:#fff; border:1px solid var(--line); border-radius:6px; padding:20px; margin-bottom:24px; }
+  .card-form h3{ font-family:"Fraunces",serif; font-weight:500; margin-top:0; }
+  .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+  .form-grid .full{ grid-column:1 / -1; }
+  .form-grid label{ display:block; font-size:.8rem; color:var(--muted); margin-bottom:4px; }
+
+  #status{ color:var(--muted); font-size:.88rem; min-height:1.2em; margin-bottom:12px; }
+  #status.err{ color:var(--err); }
+  .empty{ color:var(--muted); padding:16px 0; }
+  .product-actions-cell{ display:flex; gap:6px; flex-wrap:wrap; }
+  .product-actions-cell button{ padding:6px 10px; font-size:.78rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Panel admin — Five Group</h1>
+  <p class="sub">Kelola pesanan, produk, dan pesan masuk dari website.</p>
+
+  <div class="key-row">
+    <input type="password" id="adminKey" placeholder="Masukkan admin key">
+    <button id="loadBtn">Masuk</button>
+  </div>
+  <p id="status"></p>
+
+  <div id="app">
+    <div class="stat-cards" id="statCards"></div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="pesanan">Pesanan</button>
+      <button class="tab-btn" data-tab="produk">Produk</button>
+      <button class="tab-btn" data-tab="tim">Tim</button>
+      <button class="tab-btn" data-tab="pesan">Pesan Kontak</button>
+    </div>
+
+    <!-- ORDERS -->
+    <div class="tab-panel active" id="tab-pesanan">
+      <table>
+        <thead><tr><th>Waktu</th><th>Produk</th><th>Qty</th><th>Total</th><th>Pemesan</th><th>WA</th><th>Status</th></tr></thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+    </div>
+
+    <!-- PRODUCTS -->
+    <div class="tab-panel" id="tab-produk">
+      <div class="card-form">
+        <h3>Tambah produk baru</h3>
+        <div class="form-grid">
+          <div><label for="pName">Nama produk</label><input id="pName"></div>
+          <div><label for="pCategory">Kategori</label><input id="pCategory" placeholder="mis. Camilan"></div>
+          <div><label for="pPrice">Harga (Rp)</label><input id="pPrice" type="number" min="0"></div>
+          <div><label for="pImage">URL gambar</label><input id="pImage" placeholder="images/products/nama-file.jpg"></div>
+          <div class="full"><label for="pDesc">Deskripsi</label><textarea id="pDesc" rows="2"></textarea></div>
+        </div>
+        <button id="addProductBtn">Tambah produk</button>
+      </div>
+      <table>
+        <thead><tr><th>Gambar</th><th>Nama</th><th>Kategori</th><th>Harga</th><th>Status</th><th>Aksi</th></tr></thead>
+        <tbody id="productsBody"></tbody>
+      </table>
+    </div>
+
+    <!-- TEAM -->
+    <div class="tab-panel" id="tab-tim">
+      <div class="card-form">
+        <h3>Tambah koordinator baru</h3>
+        <div class="form-grid">
+          <div><label for="tName">Nama</label><input id="tName"></div>
+          <div><label for="tPosition">Jabatan</label><input id="tPosition" placeholder="mis. Koordinator Produksi"></div>
+          <div class="full"><label for="tDesc">Tugas / deskripsi singkat</label><textarea id="tDesc" rows="2"></textarea></div>
+          <div class="full">
+            <label for="tPhoto">Foto profil (opsional)</label>
+            <input id="tPhoto" type="file" accept="image/png, image/jpeg, image/webp">
+            <p id="tPhotoPreviewWrap" style="margin-top:8px; display:none;">
+              <img id="tPhotoPreview" style="width:64px;height:64px;border-radius:50%;object-fit:cover;">
+            </p>
+          </div>
+        </div>
+        <button id="addTeamBtn">Tambah koordinator</button>
+      </div>
+      <table>
+        <thead><tr><th>Foto</th><th>Nama</th><th>Jabatan</th><th>Status</th><th>Aksi</th></tr></thead>
+        <tbody id="teamBody"></tbody>
+      </table>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="tab-panel" id="tab-pesan">
+      <table>
+        <thead><tr><th>Waktu</th><th>Nama</th><th>Email</th><th>Pesan</th></tr></thead>
+        <tbody id="messagesBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var key = "";
+  var statusEl = document.getElementById("status");
+  var app = document.getElementById("app");
+
+  document.getElementById("loadBtn").addEventListener("click", function () {
+    key = document.getElementById("adminKey").value.trim();
+    if (!key) { setStatus("Masukkan admin key terlebih dahulu.", true); return; }
+    loadAll();
+  });
+
+  document.querySelectorAll(".tab-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".tab-btn").forEach(function (b) { b.classList.remove("active"); });
+      document.querySelectorAll(".tab-panel").forEach(function (p) { p.classList.remove("active"); });
+      btn.classList.add("active");
+      document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  function setStatus(text, isErr) {
+    statusEl.textContent = text;
+    statusEl.className = isErr ? "err" : "";
+  }
+
+  function api(path, options) {
+    var sep = path.indexOf("?") === -1 ? "?" : "&";
+    return fetch(path + sep + "key=" + encodeURIComponent(key), options).then(function (res) {
+      return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
+    });
+  }
+
+  function fmtRp(n) { return "Rp " + Number(n).toLocaleString("id-ID"); }
+  function fmtDate(iso) { return new Date(iso).toLocaleString("id-ID"); }
+
+  function loadAll() {
+    setStatus("Memuat...");
+    Promise.all([api("/api/stats"), api("/api/orders"), api("/api/products/admin"), api("/api/messages"), api("/api/team/admin")])
+      .then(function (results) {
+        var bad = results.find(function (r) { return !r.ok; });
+        if (bad) {
+          setStatus(bad.data.error || "Gagal memuat data.", true);
+          app.classList.remove("visible");
+          return;
+        }
+        setStatus("");
+        app.classList.add("visible");
+        renderStats(results[0].data);
+        renderOrders(results[1].data.orders);
+        renderProducts(results[2].data.products);
+        renderMessages(results[3].data.messages);
+        renderTeam(results[4].data.team);
+      })
+      .catch(function () { setStatus("Tidak dapat terhubung ke server.", true); });
+  }
+
+  function renderStats(s) {
+    var cards = [
+      ["Total kunjungan", s.visits],
+      ["Total pesanan", s.totalOrders],
+      ["Pesanan baru", s.pendingOrders],
+      ["Total omzet", fmtRp(s.totalRevenue)],
+      ["Pesan masuk", s.totalMessages],
+      ["Produk aktif", s.totalProducts],
+      ["Koordinator aktif", s.totalTeam]
+    ];
+    document.getElementById("statCards").innerHTML = cards
+      .map(function (c) { return '<div class="stat-card"><span class="num">' + c[1] + '</span><span class="label">' + c[0] + "</span></div>"; })
+      .join("");
+  }
+
+  function renderOrders(orders) {
+    var tbody = document.getElementById("ordersBody");
+    if (!orders.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Belum ada pesanan masuk.</td></tr>'; return; }
+    tbody.innerHTML = orders
+      .map(function (o) {
+        return (
+          "<tr>" +
+          "<td>" + fmtDate(o.created_at) + "</td>" +
+          "<td>" + o.product_name + "</td>" +
+          "<td>" + o.qty + "</td>" +
+          "<td>" + fmtRp(o.total) + "</td>" +
+          "<td>" + o.customer_name + "</td>" +
+          '<td><a href="https://wa.me/' + o.phone.replace(/\D/g, "") + '" target="_blank" rel="noopener">' + o.phone + "</a></td>" +
+          '<td><select data-order-id="' + o.id + '">' +
+          ["Baru", "Diproses", "Selesai", "Dibatalkan"]
+            .map(function (s) { return '<option value="' + s + '"' + (s === o.status ? " selected" : "") + ">" + s + "</option>"; })
+            .join("") +
+          "</select></td>" +
+          "</tr>"
+        );
+      })
+      .join("");
+
+    tbody.querySelectorAll("select[data-order-id]").forEach(function (sel) {
+      sel.addEventListener("change", function () {
+        var id = sel.getAttribute("data-order-id");
+        api("/api/orders/" + id, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: sel.value })
+        }).then(function (r) {
+          if (!r.ok) setStatus(r.data.error || "Gagal mengubah status.", true);
+          else loadAll();
+        });
+      });
+    });
+  }
+
+  function renderProducts(products) {
+    var tbody = document.getElementById("productsBody");
+    if (!products.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Belum ada produk.</td></tr>'; return; }
+    tbody.innerHTML = products
+      .map(function (p) {
+        return (
+          "<tr>" +
+          "<td>" + (p.image_url ? '<img src="' + p.image_url + '" alt="" style="width:56px;height:44px;object-fit:cover;border-radius:4px;">' : '<span style="color:#999;">–</span>') + "</td>" +
+          "<td>" + p.name + "</td>" +
+          "<td>" + (p.category || "-") + "</td>" +
+          "<td>" + fmtRp(p.price) + "</td>" +
+          "<td>" + (p.active ? "Aktif" : "Nonaktif") + "</td>" +
+          '<td class="product-actions-cell">' +
+          '<button class="secondary" data-toggle="' + p.id + '" data-active="' + p.active + '">' + (p.active ? "Nonaktifkan" : "Aktifkan") + "</button>" +
+          '<button class="danger" data-delete="' + p.id + '">Hapus</button>' +
+          "</td></tr>"
+        );
+      })
+      .join("");
+
+    tbody.querySelectorAll("[data-toggle]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-toggle");
+        var active = btn.getAttribute("data-active") === "1" ? false : true;
+        api("/api/products/" + id, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ active: active })
+        }).then(function (r) {
+          if (!r.ok) setStatus(r.data.error || "Gagal mengubah produk.", true);
+          else loadAll();
+        });
+      });
+    });
+
+    tbody.querySelectorAll("[data-delete]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        if (!confirm("Hapus produk ini? Tindakan ini tidak bisa dibatalkan.")) return;
+        var id = btn.getAttribute("data-delete");
+        api("/api/products/" + id, { method: "DELETE" }).then(function (r) {
+          if (!r.ok) setStatus(r.data.error || "Gagal menghapus produk.", true);
+          else loadAll();
+        });
+      });
+    });
+  }
+
+  function renderTeam(team) {
+    var tbody = document.getElementById("teamBody");
+    if (!team.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Belum ada koordinator ditambahkan.</td></tr>'; return; }
+    tbody.innerHTML = team
+      .map(function (m) {
+        var thumb = m.photo
+          ? '<img src="' + m.photo + '" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">'
+          : '<span style="display:inline-flex;width:40px;height:40px;border-radius:50%;background:var(--ink);color:#fff;align-items:center;justify-content:center;font-size:.75rem;">' +
+            (m.name || "").split(/\s+/).filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join("") +
+            "</span>";
+        return (
+          "<tr>" +
+          "<td>" + thumb + "</td>" +
+          "<td>" + m.name + "</td>" +
+          "<td>" + m.position + "</td>" +
+          "<td>" + (m.active ? "Aktif" : "Nonaktif") + "</td>" +
+          '<td class="product-actions-cell">' +
+          '<button class="secondary" data-team-toggle="' + m.id + '" data-active="' + m.active + '">' + (m.active ? "Nonaktifkan" : "Aktifkan") + "</button>" +
+          '<button class="danger" data-team-delete="' + m.id + '">Hapus</button>' +
+          "</td></tr>"
+        );
+      })
+      .join("");
+
+    tbody.querySelectorAll("[data-team-toggle]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-team-toggle");
+        var active = btn.getAttribute("data-active") === "1" ? false : true;
+        api("/api/team/" + id, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ active: active })
+        }).then(function (r) {
+          if (!r.ok) setStatus(r.data.error || "Gagal mengubah data.", true);
+          else loadAll();
+        });
+      });
+    });
+
+    tbody.querySelectorAll("[data-team-delete]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        if (!confirm("Hapus koordinator ini? Tindakan ini tidak bisa dibatalkan.")) return;
+        var id = btn.getAttribute("data-team-delete");
+        api("/api/team/" + id, { method: "DELETE" }).then(function (r) {
+          if (!r.ok) setStatus(r.data.error || "Gagal menghapus data.", true);
+          else loadAll();
+        });
+      });
+    });
+  }
+
+  var teamPhotoData = "";
+  var teamPhotoInput = document.getElementById("tPhoto");
+  if (teamPhotoInput) {
+    teamPhotoInput.addEventListener("change", function () {
+      var file = teamPhotoInput.files[0];
+      if (!file) { teamPhotoData = ""; return; }
+      if (file.size > 2 * 1024 * 1024) {
+        setStatus("Ukuran foto maksimal 2MB. Pilih foto lain atau kompres dulu.", true);
+        teamPhotoInput.value = "";
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function () {
+        teamPhotoData = reader.result;
+        var preview = document.getElementById("tPhotoPreview");
+        var wrap = document.getElementById("tPhotoPreviewWrap");
+        preview.src = teamPhotoData;
+        wrap.style.display = "block";
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  document.getElementById("addTeamBtn").addEventListener("click", function () {
+    var name = document.getElementById("tName").value.trim();
+    var position = document.getElementById("tPosition").value.trim();
+    var description = document.getElementById("tDesc").value.trim();
+
+    if (!name || !position) { setStatus("Nama dan jabatan wajib diisi.", true); return; }
+
+    api("/api/team", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name, position: position, description: description, photo: teamPhotoData })
+    }).then(function (r) {
+      if (!r.ok) { setStatus(r.data.error || "Gagal menambah koordinator.", true); return; }
+      document.getElementById("tName").value = "";
+      document.getElementById("tPosition").value = "";
+      document.getElementById("tDesc").value = "";
+      document.getElementById("tPhoto").value = "";
+      document.getElementById("tPhotoPreviewWrap").style.display = "none";
+      teamPhotoData = "";
+      loadAll();
+    });
+  });
+
+  function renderMessages(messages) {
+    var tbody = document.getElementById("messagesBody");
+    if (!messages.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">Belum ada pesan masuk.</td></tr>'; return; }
+    tbody.innerHTML = messages
+      .map(function (m) {
+        return "<tr><td>" + fmtDate(m.created_at) + "</td><td>" + m.name + "</td><td>" + m.email + "</td><td>" + m.message + "</td></tr>";
+      })
+      .join("");
+  }
+
+  document.getElementById("addProductBtn").addEventListener("click", function () {
+    var name = document.getElementById("pName").value.trim();
+    var category = document.getElementById("pCategory").value.trim();
+    var price = document.getElementById("pPrice").value;
+    var imageUrl = document.getElementById("pImage").value.trim();
+    var description = document.getElementById("pDesc").value.trim();
+
+    if (!name || !price) { setStatus("Nama dan harga produk wajib diisi.", true); return; }
+
+    api("/api/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name, category: category, price: price, image_url: imageUrl, description: description })
+    }).then(function (r) {
+      if (!r.ok) { setStatus(r.data.error || "Gagal menambah produk.", true); return; }
+      document.getElementById("pName").value = "";
+      document.getElementById("pCategory").value = "";
+      document.getElementById("pPrice").value = "";
+      document.getElementById("pImage").value = "";
+      document.getElementById("pDesc").value = "";
+      loadAll();
+    });
+  });
+})();
+</script>
+</body>
+</html>
